@@ -91,6 +91,12 @@ namespace EventNinja.Services
             [CallerMemberName] string methodName = "", 
             [CallerFilePath] string className = "")
         {
+            // ตรวจสอบว่า log level นี้ถูก enable หรือไม่
+            if (!IsLogLevelEnabled(level))
+            {
+                return;
+            }
+
             var logEntry = new LogEntry
             {
                 Timestamp = DateTime.Now,
@@ -269,6 +275,19 @@ namespace EventNinja.Services
             {
                 // Silent fail
             }
+        }
+
+        private bool IsLogLevelEnabled(LogLevel level)
+        {
+            return level switch
+            {
+                LogLevel.Debug => _config.EnableDebug,
+                LogLevel.Info => _config.EnableInfo,
+                LogLevel.Warning => _config.EnableWarning,
+                LogLevel.Error => _config.EnableError,
+                LogLevel.Critical => _config.EnableCritical,
+                _ => true
+            };
         }
 
         private void CleanupEmptyDirectories(string directory)
