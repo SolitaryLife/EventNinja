@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,10 +37,19 @@ namespace EventNinja.Services
 
         private void EnsureLogDirectoryExists()
         {
-            if (!Directory.Exists(_logDirectory))
+            var fullLogPath = GetCurrentLogDirectoryPath();
+            if (!Directory.Exists(fullLogPath))
             {
-                Directory.CreateDirectory(_logDirectory);
+                Directory.CreateDirectory(fullLogPath);
             }
+        }
+
+        private string GetCurrentLogDirectoryPath()
+        {
+            var now = DateTime.Now;
+            var monthName = now.ToString("MMMM", System.Globalization.CultureInfo.CurrentCulture);
+            var yearMonthPath = Path.Combine(now.Year.ToString(), monthName);
+            return Path.Combine(_logDirectory, yearMonthPath);
         }
 
         public void LogDebug(string message, string category = "Application", 
@@ -138,8 +148,12 @@ namespace EventNinja.Services
 
         private async Task WriteToFileAsync(LogEntry logEntry)
         {
+            // อัปเดต log directory สำหรับเดือนปัจจุบัน
+            EnsureLogDirectoryExists();
+            
             var logFileName = GetCurrentLogFileName();
-            var logFilePath = Path.Combine(_logDirectory, logFileName);
+            var logDirectoryPath = GetCurrentLogDirectoryPath();
+            var logFilePath = Path.Combine(logDirectoryPath, logFileName);
             
             // ตรวจสอบขนาดไฟล์ก่อนเขียน
             if (File.Exists(logFilePath))
@@ -235,7 +249,9 @@ namespace EventNinja.Services
             try
             {
                 var cutoffDate = DateTime.Now.AddDays(-_config.RetentionDays);
-                var logFiles = Directory.GetFiles(_logDirectory, "*.log*");
+                
+                // ค้นหาไฟล์ log ในทุก subdirectory (ปี/เดือน)
+                var logFiles = Directory.GetFiles(_logDirectory, "*.log*", SearchOption.AllDirectories);
 
                 foreach (var logFile in logFiles)
                 {
@@ -243,6 +259,30 @@ namespace EventNinja.Services
                     if (fileInfo.CreationTime < cutoffDate)
                     {
                         File.Delete(logFile);
+                    }
+                }
+                
+                // ลบ directory เปล่า (ถ้ามี)
+                CleanupEmptyDirectories(_logDirectory);
+            }
+            catch
+            {
+                // Silent fail
+            }
+        }
+
+        private void CleanupEmptyDirectories(string directory)
+        {
+            try
+            {
+                foreach (var subDirectory in Directory.GetDirectories(directory))
+                {
+                    CleanupEmptyDirectories(subDirectory);
+                    
+                    // ลบ directory ถ้าไม่มีไฟล์และไม่มี subdirectory
+                    if (!Directory.EnumerateFileSystemEntries(subDirectory).Any())
+                    {
+                        Directory.Delete(subDirectory);
                     }
                 }
             }
