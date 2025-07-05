@@ -143,11 +143,11 @@ Logs/
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `AppName` | string | Required | Application name (used in filename) |
+| `AppName` | string | "Application" | Application name (used in filename) |
 | `LogDirectory` | string | "Logs" | Base directory for log files |
 | `MaxFileSizeMB` | int | 5 | Maximum file size before rotation |
-| `DeleteOldLogs` | bool | true | Enable automatic cleanup |
-| `RetentionDays` | int | 30 | Days to keep log files |
+| `DeleteOldLogs` | bool | false | Enable automatic cleanup |
+| `RetentionDays` | int | 7 | Days to keep log files |
 | `CleanupIntervalHours` | int | 24 | Hours between cleanup runs |
 | `EnableDebug` | bool? | null | Override Debug level (null = auto-detect) |
 | `EnableInfo` | bool? | null | Override Info level (null = auto-detect) |
