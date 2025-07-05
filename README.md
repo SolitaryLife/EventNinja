@@ -18,6 +18,7 @@
 - 🎯 **Structured Logging** - Detailed log entries with timestamp, level, category, and method info
 - ⚙️ **Dependency Injection** - Full DI container support
 - 📊 **Multiple Log Levels** - Debug, Info, Warning, Error, Critical
+- 🎛️ **Log Level Control** - Enable/disable specific log levels for different environments
 
 ## 📦 Installation
 
@@ -48,6 +49,13 @@ builder.ConfigureServices(services =>
         config.DeleteOldLogs = true;
         config.RetentionDays = 30;
         config.CleanupIntervalHours = 24;
+        
+        // Log level control
+        config.EnableDebug = true;
+        config.EnableInfo = true;
+        config.EnableWarning = true;
+        config.EnableError = true;
+        config.EnableCritical = true;
     });
 });
 ```
@@ -141,6 +149,11 @@ Logs/
 | `DeleteOldLogs` | bool | true | Enable automatic cleanup |
 | `RetentionDays` | int | 30 | Days to keep log files |
 | `CleanupIntervalHours` | int | 24 | Hours between cleanup runs |
+| `EnableDebug` | bool | true | Enable Debug level logging |
+| `EnableInfo` | bool | true | Enable Info level logging |
+| `EnableWarning` | bool | true | Enable Warning level logging |
+| `EnableError` | bool | true | Enable Error level logging |
+| `EnableCritical` | bool | true | Enable Critical level logging |
 
 ## 🔄 File Rotation
 
@@ -192,6 +205,32 @@ public async Task ProcessOrder(int orderId)
     // Automatically includes method name "ProcessOrder"
     _logger.LogInfo($"Processing order {orderId}", "OrderService");
 }
+```
+
+### Environment-Based Log Level Control
+
+```csharp
+// Development Environment - Log everything
+services.AddEventNinja(config =>
+{
+    config.AppName = "MyApp";
+    config.EnableDebug = true;
+    config.EnableInfo = true;
+    config.EnableWarning = true;
+    config.EnableError = true;
+    config.EnableCritical = true;
+});
+
+// Production Environment - Only important logs
+services.AddEventNinja(config =>
+{
+    config.AppName = "MyApp";
+    config.EnableDebug = false;    // Skip debug logs
+    config.EnableInfo = false;     // Skip info logs
+    config.EnableWarning = true;   // Keep warnings
+    config.EnableError = true;     // Keep errors
+    config.EnableCritical = true;  // Keep critical logs
+});
 ```
 
 ## 📄 License
