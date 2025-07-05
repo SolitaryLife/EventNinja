@@ -18,7 +18,7 @@
 - 🎯 **Structured Logging** - Detailed log entries with timestamp, level, category, and method info
 - ⚙️ **Dependency Injection** - Full DI container support
 - 📊 **Multiple Log Levels** - Debug, Info, Warning, Error, Critical
-- 🎛️ **Log Level Control** - Enable/disable specific log levels for different environments
+- 🎛️ **Smart Log Level Control** - Auto-detects environment with customizable overrides
 
 ## 📦 Installation
 
@@ -50,12 +50,12 @@ builder.ConfigureServices(services =>
         config.RetentionDays = 30;
         config.CleanupIntervalHours = 24;
         
-        // Log level control
-        config.EnableDebug = true;
-        config.EnableInfo = true;
-        config.EnableWarning = true;
-        config.EnableError = true;
-        config.EnableCritical = true;
+        // Log levels auto-detected by environment
+        // Development: Debug=true, Info=true, Warning=true, Error=true, Critical=true
+        // Production: Debug=false, Info=false, Warning=true, Error=true, Critical=true
+        
+        // Optional: Override specific levels if needed
+        // config.EnableDebug = false;  // Custom override
     });
 });
 ```
@@ -149,11 +149,11 @@ Logs/
 | `DeleteOldLogs` | bool | true | Enable automatic cleanup |
 | `RetentionDays` | int | 30 | Days to keep log files |
 | `CleanupIntervalHours` | int | 24 | Hours between cleanup runs |
-| `EnableDebug` | bool | true | Enable Debug level logging |
-| `EnableInfo` | bool | true | Enable Info level logging |
-| `EnableWarning` | bool | true | Enable Warning level logging |
-| `EnableError` | bool | true | Enable Error level logging |
-| `EnableCritical` | bool | true | Enable Critical level logging |
+| `EnableDebug` | bool? | null | Override Debug level (null = auto-detect) |
+| `EnableInfo` | bool? | null | Override Info level (null = auto-detect) |
+| `EnableWarning` | bool? | null | Override Warning level (null = auto-detect) |
+| `EnableError` | bool? | null | Override Error level (null = auto-detect) |
+| `EnableCritical` | bool? | null | Override Critical level (null = auto-detect) |
 
 ## 🔄 File Rotation
 
@@ -207,29 +207,88 @@ public async Task ProcessOrder(int orderId)
 }
 ```
 
-### Environment-Based Log Level Control
+### Smart Environment Detection
+
+EventNinja automatically detects your environment and applies appropriate log levels:
+
+**Environment Detection Sources:**
+1. `ASPNETCORE_ENVIRONMENT` environment variable
+2. `DOTNET_ENVIRONMENT` environment variable  
+3. Defaults to "Production" if not found
+
+**Default Log Level Presets:**
+
+| Environment | Debug | Info | Warning | Error | Critical |
+|-------------|-------|------|---------|-------|----------|
+| Development | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Production | ❌ | ❌ | ✅ | ✅ | ✅ |
 
 ```csharp
-// Development Environment - Log everything
+// Auto-detection (recommended)
 services.AddEventNinja(config =>
 {
     config.AppName = "MyApp";
-    config.EnableDebug = true;
-    config.EnableInfo = true;
-    config.EnableWarning = true;
-    config.EnableError = true;
-    config.EnableCritical = true;
+    // Log levels automatically set based on environment
 });
 
-// Production Environment - Only important logs
+// Custom overrides when needed
 services.AddEventNinja(config =>
 {
     config.AppName = "MyApp";
-    config.EnableDebug = false;    // Skip debug logs
-    config.EnableInfo = false;     // Skip info logs
-    config.EnableWarning = true;   // Keep warnings
-    config.EnableError = true;     // Keep errors
-    config.EnableCritical = true;  // Keep critical logs
+    config.EnableDebug = false;    // Force disable debug even in Development
+    config.EnableInfo = true;      // Force enable info even in Production
+    // Other levels use auto-detection
+});
+```
+
+### Understanding Custom Override Behavior
+
+**Important:** Custom overrides always take precedence over environment detection, regardless of whether you're in Development or Production.
+
+**Rule:** 
+- **Has Custom Value** → Uses your custom setting (ignores environment)
+- **No Custom Value (null)** → Uses auto-detection based on environment
+
+**Example Scenario:**
+
+```csharp
+services.AddEventNinja(config =>
+{
+    config.AppName = "MyApp";
+    config.EnableDebug = false;    // Custom Override
+    config.EnableInfo = true;      // Custom Override  
+    // EnableWarning = null (auto-detect)
+    // EnableError = null (auto-detect)
+    // EnableCritical = null (auto-detect)
+});
+```
+
+**Result Table:**
+
+| Environment | Debug | Info | Warning | Error | Critical |
+|-------------|-------|------|---------|-------|----------|
+| **Development** | ❌ (custom) | ✅ (custom) | ✅ (auto) | ✅ (auto) | ✅ (auto) |
+| **Production** | ❌ (custom) | ✅ (custom) | ✅ (auto) | ✅ (auto) | ✅ (auto) |
+
+**Key Points:**
+1. `EnableDebug = false` applies to **both** Development and Production
+2. `EnableInfo = true` applies to **both** Development and Production  
+3. Warning, Error, Critical use environment-based defaults
+4. Custom overrides are **environment-independent**
+
+**When to Use Custom Overrides:**
+- **Disable Debug in Development:** When debug logs are too noisy during testing
+- **Enable Info in Production:** When you need specific info logs in production for monitoring
+- **Temporary Debugging:** Enable debug logs in production for troubleshooting (not recommended for long-term)
+
+**Best Practice:**
+```csharp
+// Recommended: Let auto-detection handle most cases
+services.AddEventNinja(config =>
+{
+    config.AppName = "MyApp";
+    // Only override when you have specific requirements
+    // config.EnableDebug = false;  // Uncomment only if needed
 });
 ```
 

@@ -281,11 +281,11 @@ namespace EventNinja.Services
         {
             return level switch
             {
-                LogLevel.Debug => _config.EnableDebug,
-                LogLevel.Info => _config.EnableInfo,
-                LogLevel.Warning => _config.EnableWarning,
-                LogLevel.Error => _config.EnableError,
-                LogLevel.Critical => _config.EnableCritical,
+                LogLevel.Debug => _config.IsDebugEnabled,
+                LogLevel.Info => _config.IsInfoEnabled,
+                LogLevel.Warning => _config.IsWarningEnabled,
+                LogLevel.Error => _config.IsErrorEnabled,
+                LogLevel.Critical => _config.IsCriticalEnabled,
                 _ => true
             };
         }

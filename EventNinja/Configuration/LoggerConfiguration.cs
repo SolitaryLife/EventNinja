@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace EventNinja.Configuration
 {
@@ -11,11 +12,19 @@ namespace EventNinja.Configuration
         public int RetentionDays { get; set; } = 7;
         public int CleanupIntervalHours { get; set; } = 24;
         
-        public bool EnableDebug { get; set; } = true;
-        public bool EnableInfo { get; set; } = true;
-        public bool EnableWarning { get; set; } = true;
-        public bool EnableError { get; set; } = true;
-        public bool EnableCritical { get; set; } = true;
+        public bool? EnableDebug { get; set; } = null;
+        public bool? EnableInfo { get; set; } = null;
+        public bool? EnableWarning { get; set; } = null;
+        public bool? EnableError { get; set; } = null;
+        public bool? EnableCritical { get; set; } = null;
+        
+        private static readonly Lazy<bool> _isDevelopment = new Lazy<bool>(() => DetectDevelopmentEnvironment());
+        
+        public bool IsDebugEnabled => EnableDebug ?? GetDefaultLogLevel(nameof(EnableDebug));
+        public bool IsInfoEnabled => EnableInfo ?? GetDefaultLogLevel(nameof(EnableInfo));
+        public bool IsWarningEnabled => EnableWarning ?? GetDefaultLogLevel(nameof(EnableWarning));
+        public bool IsErrorEnabled => EnableError ?? GetDefaultLogLevel(nameof(EnableError));
+        public bool IsCriticalEnabled => EnableCritical ?? GetDefaultLogLevel(nameof(EnableCritical));
 
         internal long MaxFileSizeBytes => MaxFileSizeMB * 1024 * 1024;
         
@@ -24,6 +33,30 @@ namespace EventNinja.Configuration
             return Path.IsPathRooted(LogDirectory) 
                 ? LogDirectory 
                 : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LogDirectory);
+        }
+        
+        private static bool DetectDevelopmentEnvironment()
+        {
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
+                           ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") 
+                           ?? "Production";
+            
+            return environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+        }
+        
+        private bool GetDefaultLogLevel(string levelName)
+        {
+            var isDevelopment = _isDevelopment.Value;
+            
+            return levelName switch
+            {
+                nameof(EnableDebug) => isDevelopment,
+                nameof(EnableInfo) => isDevelopment,
+                nameof(EnableWarning) => true,
+                nameof(EnableError) => true,
+                nameof(EnableCritical) => true,
+                _ => true
+            };
         }
     }
 }
